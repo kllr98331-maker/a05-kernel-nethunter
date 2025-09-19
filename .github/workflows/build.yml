@@ -1,0 +1,40 @@
+name: Build Kernel A05 with RTL8188FU
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Install build deps
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential bc bison flex libssl-dev \
+          gcc-aarch64-linux-gnu make curl unzip
+
+    - name: Download kernel source (MEGA link)
+      run: |
+        curl -L "https://mega.nz/file/2MUjiTYK#Bf5auSu8Bv4S05UeUGwYsEJC8hHPgTl1PGXiTvHLpe8" \
+          -o kernel.zip
+        unzip kernel.zip -d kernel-src
+
+    - name: Copy config
+      run: |
+        cp config_a05 kernel-src/.config
+
+    - name: Build kernel + modules
+      run: |
+        cd kernel-src
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: kernel-build
+        path: kernel-src/arch/arm64/boot/Image*
